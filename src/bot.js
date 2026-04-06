@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import http from 'http';
 import { Client, GatewayIntentBits, Events } from 'discord.js';
 import { parseTradingViewCsv } from './csvParser.js';
 import { ensureUserTab, appendOrders, syncGlobalLeaderboard } from './sheetsManager.js';
@@ -98,3 +99,15 @@ if (!token) {
     // Initiate persistent WebSocket connection
     client.login(token);
 }
+
+// ─── Render Port Binding ────────────────────────────────────────────────────
+// Render requires every Web Service to bind to an HTTP port.
+// This tiny server has one job: respond 200 OK to Render's health checks.
+// It uses Node's built-in 'http' module — zero extra dependencies needed.
+const PORT = process.env.PORT || 10000;
+http.createServer((req, res) => {
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.end('Argus Bot is running.');
+}).listen(PORT, '0.0.0.0', () => {
+    console.log(`Health-check server listening on port ${PORT}`);
+});
