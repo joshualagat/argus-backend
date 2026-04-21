@@ -28,21 +28,30 @@ export async function ensureUserTab(username) {
     const existingSheets = res.data.sheets.map(s => s.properties.title);
 
     if (!existingSheets.includes(username)) {
-        await sheets.spreadsheets.batchUpdate({
-            spreadsheetId,
-            requestBody: {
-                requests: [{ addSheet: { properties: { title: username } } }]
-            }
-        });
+        try {
+            await sheets.spreadsheets.batchUpdate({
+                spreadsheetId,
+                requestBody: {
+                    requests: [{ addSheet: { properties: { title: username } } }]
+                }
+            });
 
-        const headers = ["Timestamp", "Symbol", "Side", "Quantity", "Avg Fill Price", "Account Balance", "Total P&L"];
-        await sheets.spreadsheets.values.update({
-            spreadsheetId,
-            range: `${username}!A1:G1`,
-            valueInputOption: "USER_ENTERED",
-            requestBody: { values: [headers] }
-        });
-        console.log(`Created new tab for user: ${username}`);
+            const headers = ["Timestamp", "Symbol", "Side", "Quantity", "Avg Fill Price", "Account Balance", "Total P&L"];
+            await sheets.spreadsheets.values.update({
+                spreadsheetId,
+                range: `${username}!A1:G1`,
+                valueInputOption: "USER_ENTERED",
+                requestBody: { values: [headers] }
+            });
+            console.log(`Created new tab for user: ${username}`);
+        } catch (e) {
+            // If the tab already exists (race condition / duplicate request), that's fine — just continue
+            if (e?.errors?.[0]?.reason === 'badRequest' && e?.errors?.[0]?.message?.includes('already exists')) {
+                console.log(`Tab "${username}" already exists, skipping creation.`);
+            } else {
+                throw e; // Re-throw any other unexpected errors
+            }
+        }
     }
 }
 
